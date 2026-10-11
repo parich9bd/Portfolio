@@ -17,7 +17,21 @@ type Ripple = {
   life: number;
 };
 
+type Lightning = {
+  points: { x: number; y: number }[];
+  life: number;
+  color: string;
+};
+
+type TrailPoint = {
+  x: number;
+  y: number;
+  life: number;
+};
+
 const COLORS = ["#FF5B3A", "#FF8A65", "#6EA8FF", "#FFFFFF"];
+
+const random = (min: number, max: number) => Math.random() * (max - min) + min;
 
 export default function EnergyCursor() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -28,15 +42,13 @@ export default function EnergyCursor() {
 
     if (!canvas || !ctx) return;
 
-    const media = window.matchMedia(
+    const pointerMedia = window.matchMedia(
       "(hover: hover) and (pointer: fine)",
     );
 
-    const reducedMotion = window.matchMedia(
-      "(prefers-reduced-motion: reduce)",
-    );
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
-    if (!media.matches || reducedMotion.matches) return;
+    if (!pointerMedia.matches || reducedMotion.matches) return;
 
     let width = window.innerWidth;
     let height = window.innerHeight;
@@ -57,8 +69,13 @@ export default function EnergyCursor() {
 
     const particles: Particle[] = [];
     const ripples: Ripple[] = [];
+    const lightnings: Lightning[] = [];
+    const trail: TrailPoint[] = [];
 
-    // Resize canvas
+    // ----------------------------------------
+    // Canvas setup
+    // ----------------------------------------
+
     const resize = () => {
       width = window.innerWidth;
       height = window.innerHeight;
@@ -73,14 +90,13 @@ export default function EnergyCursor() {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
-    // Create energy particles
-    const addParticle = (
-      x: number,
-      y: number,
-      velocity: number,
-    ) => {
+    // ----------------------------------------
+    // Energy particles
+    // ----------------------------------------
+
+    const addParticle = (x: number, y: number, power = 1, color?: string) => {
       const angle = Math.random() * Math.PI * 2;
-      const force = Math.random() * 1.8 + velocity * 0.025;
+      const force = random(0.5, 2.5) * power;
 
       particles.push({
         x,
@@ -88,81 +104,59 @@ export default function EnergyCursor() {
         vx: Math.cos(angle) * force,
         vy: Math.sin(angle) * force,
         life: 1,
-        size: Math.random() * 2.2 + 0.7,
-        color: COLORS[Math.floor(Math.random() * COLORS.length)],
+        size: random(0.8, 2.8),
+        color: color ?? COLORS[Math.floor(Math.random() * COLORS.length)],
       });
 
-      if (particles.length > 180) {
-        particles.splice(0, particles.length - 180);
+      if (particles.length > 220) {
+        particles.splice(0, particles.length - 220);
       }
     };
 
-    // Draw lightning between two points
-    const addLightning = (
+    // ----------------------------------------
+    // Lightning generator
+    // ----------------------------------------
+
+    const createLightning = (
       x1: number,
       y1: number,
       x2: number,
       y2: number,
     ) => {
-      const dx = x2 - x1;
-      const dy = y2 - y1;
-      const distance = Math.hypot(dx, dy);
+      const distance = Math.hypot(x2 - x1, y2 - y1);
 
-      if (distance < 8) return;
+      if (distance < 12) return;
 
-      const segments = Math.min(9, Math.ceil(distance / 10));
+      const segments = Math.min(12, Math.ceil(distance / 8));
 
-      const points: Array<{ x: number; y: number }> = [
-        { x: x1, y: y1 },
-      ];
+      const points: { x: number; y: number }[] = [{ x: x1, y: y1 }];
 
       for (let i = 1; i < segments; i++) {
         const progress = i / segments;
 
         points.push({
-          x: x1 + dx * progress + (Math.random() - 0.5) * 15,
-          y: y1 + dy * progress + (Math.random() - 0.5) * 15,
+          x: x1 + (x2 - x1) * progress + random(-13, 13),
+          y: y1 + (y2 - y1) * progress + random(-13, 13),
         });
       }
 
       points.push({ x: x2, y: y2 });
 
-      ctx.save();
-
-      ctx.globalCompositeOperation = "lighter";
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-
-      ctx.beginPath();
-      ctx.moveTo(points[0].x, points[0].y);
-
-      points.slice(1).forEach((point) => {
-        ctx.lineTo(point.x, point.y);
+      lightnings.push({
+        points,
+        life: 1,
+        color: Math.random() > 0.5 ? "#FF5B3A" : "#6EA8FF",
       });
 
-      ctx.strokeStyle = "rgba(255, 91, 58, 0.45)";
-      ctx.lineWidth = 5;
-      ctx.shadowColor = "#FF5B3A";
-      ctx.shadowBlur = 16;
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(points[0].x, points[0].y);
-
-      points.slice(1).forEach((point) => {
-        ctx.lineTo(point.x, point.y);
-      });
-
-      ctx.strokeStyle = "#FFFFFF";
-      ctx.lineWidth = 1;
-      ctx.shadowColor = "#6EA8FF";
-      ctx.shadowBlur = 9;
-      ctx.stroke();
-
-      ctx.restore();
+      if (lightnings.length > 12) {
+        lightnings.shift();
+      }
     };
 
-    // Track mouse movement
+    // ----------------------------------------
+    // Mouse movement
+    // ----------------------------------------
+
     const onPointerMove = (event: PointerEvent) => {
       if (event.pointerType !== "mouse") return;
 
@@ -177,10 +171,9 @@ export default function EnergyCursor() {
         previousY = mouseY;
       }
 
-      const speed = Math.hypot(
-        mouseX - previousX,
-        mouseY - previousY,
-      );
+      const dx = mouseX - previousX;
+      const dy = mouseY - previousY;
+      const speed = Math.hypot(dx, dy);
 
       active = true;
 
@@ -189,39 +182,59 @@ export default function EnergyCursor() {
       hovering =
         target instanceof Element &&
         Boolean(
-          target.closest(
-            'a, button, [role="button"], input, textarea, select',
-          ),
+          target.closest('a, button, [role="button"], input, textarea, select'),
         );
 
-      const count = Math.min(4, Math.ceil(speed / 12));
+      // Smooth energy trail
+      if (speed > 1) {
+        trail.push({
+          x: mouseX,
+          y: mouseY,
+          life: 1,
+        });
+      }
+
+      if (trail.length > 24) {
+        trail.shift();
+      }
+
+      // Generate particles along the movement
+      const count = Math.min(5, Math.ceil(speed / 8));
 
       for (let i = 0; i < count; i++) {
         const progress = (i + 1) / (count + 1);
 
         addParticle(
-          previousX + (mouseX - previousX) * progress,
-          previousY + (mouseY - previousY) * progress,
-          speed,
+          previousX + dx * progress,
+          previousY + dy * progress,
+          Math.min(2, speed / 20),
         );
       }
 
+      // Lightning appears during fast movements
       const now = performance.now();
 
-      if (speed > 22 && now - lastSparkTime > 65) {
-        addLightning(previousX, previousY, mouseX, mouseY);
+      if (speed > 24 && now - lastSparkTime > 75) {
+        createLightning(previousX, previousY, mouseX, mouseY);
+
         lastSparkTime = now;
       }
     };
 
-    // Click ripple
+    // ----------------------------------------
+    // Click explosion
+    // ----------------------------------------
+
     const onPointerDown = (event: PointerEvent) => {
       if (event.pointerType !== "mouse") return;
 
+      const x = event.clientX;
+      const y = event.clientY;
+
       ripples.push({
-        x: event.clientX,
-        y: event.clientY,
-        radius: 0,
+        x,
+        y,
+        radius: 2,
         life: 1,
       });
 
@@ -229,63 +242,209 @@ export default function EnergyCursor() {
         ripples.shift();
       }
 
-      for (let i = 0; i < 12; i++) {
-        addParticle(event.clientX, event.clientY, 8);
+      // Explosion
+      for (let i = 0; i < 30; i++) {
+        const angle = (Math.PI * 2 * i) / 30 + random(-0.2, 0.2);
+        const power = random(2, 7);
+
+        particles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * power,
+          vy: Math.sin(angle) * power,
+          life: 1,
+          size: random(1.2, 3.2),
+          color: COLORS[Math.floor(Math.random() * COLORS.length)],
+        });
+      }
+
+      // Radial lightning burst
+      for (let i = 0; i < 4; i++) {
+        const angle = random(0, Math.PI * 2);
+        const distance = random(25, 65);
+
+        createLightning(
+          x,
+          y,
+          x + Math.cos(angle) * distance,
+          y + Math.sin(angle) * distance,
+        );
+      }
+
+      if (particles.length > 220) {
+        particles.splice(0, particles.length - 220);
       }
     };
 
-    const onPointerLeave = () => {
-      active = false;
+    // ----------------------------------------
+    // Draw smooth energy trail
+    // ----------------------------------------
+
+    const drawTrail = (delta: number) => {
+      for (let i = trail.length - 1; i >= 0; i--) {
+        trail[i].life -= 0.045 * delta;
+
+        if (trail[i].life <= 0) {
+          trail.splice(i, 1);
+        }
+      }
+
+      if (trail.length < 2) return;
+
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      // Outer glow
+      ctx.beginPath();
+      ctx.moveTo(trail[0].x, trail[0].y);
+
+      for (let i = 1; i < trail.length - 1; i++) {
+        const current = trail[i];
+        const next = trail[i + 1];
+
+        const midX = (current.x + next.x) / 2;
+        const midY = (current.y + next.y) / 2;
+
+        ctx.quadraticCurveTo(current.x, current.y, midX, midY);
+      }
+
+      const last = trail[trail.length - 1];
+
+      ctx.lineTo(last.x, last.y);
+      ctx.strokeStyle = "rgba(255, 91, 58, 0.35)";
+      ctx.lineWidth = 8;
+      ctx.shadowColor = "#FF5B3A";
+      ctx.shadowBlur = 18;
+      ctx.stroke();
+
+      // Bright inner trail
+      ctx.beginPath();
+      ctx.moveTo(trail[0].x, trail[0].y);
+
+      for (let i = 1; i < trail.length; i++) {
+        ctx.lineTo(trail[i].x, trail[i].y);
+      }
+
+      ctx.strokeStyle = "rgba(110, 168, 255, 0.75)";
+      ctx.lineWidth = 1.5;
+      ctx.shadowColor = "#6EA8FF";
+      ctx.shadowBlur = 10;
+      ctx.stroke();
+
+      ctx.restore();
     };
 
-    // Animation loop
+    // ----------------------------------------
+    // Draw lightning
+    // ----------------------------------------
+
+    const drawLightning = (delta: number) => {
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+
+      for (let i = lightnings.length - 1; i >= 0; i--) {
+        const lightning = lightnings[i];
+
+        lightning.life -= 0.09 * delta;
+
+        if (lightning.life <= 0) {
+          lightnings.splice(i, 1);
+          continue;
+        }
+
+        ctx.globalAlpha = lightning.life;
+
+        ctx.beginPath();
+        ctx.moveTo(lightning.points[0].x, lightning.points[0].y);
+
+        lightning.points.slice(1).forEach((point) => {
+          ctx.lineTo(point.x, point.y);
+        });
+
+        ctx.strokeStyle = lightning.color;
+        ctx.lineWidth = 4;
+        ctx.shadowColor = lightning.color;
+        ctx.shadowBlur = 18;
+        ctx.stroke();
+
+        // White electric core
+        ctx.beginPath();
+        ctx.moveTo(lightning.points[0].x, lightning.points[0].y);
+
+        lightning.points.slice(1).forEach((point) => {
+          ctx.lineTo(point.x, point.y);
+        });
+
+        ctx.strokeStyle = "#FFFFFF";
+        ctx.lineWidth = 1;
+        ctx.shadowBlur = 8;
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    };
+
+    // ----------------------------------------
+    // Main animation
+    // ----------------------------------------
+
     const draw = (time: number) => {
       if (!running) return;
 
       animationId = requestAnimationFrame(draw);
 
-      const delta = Math.min(
-        lastTime ? (time - lastTime) / 16.67 : 1,
-        2,
-      );
+      const delta = Math.min(lastTime ? (time - lastTime) / 16.67 : 1, 2);
 
       lastTime = time;
 
       ctx.clearRect(0, 0, width, height);
 
-      // Particles
+      drawTrail(delta);
+      drawLightning(delta);
+
+      // Particle physics + magnetic attraction
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
 
       for (let i = particles.length - 1; i >= 0; i--) {
-        const particle = particles[i];
+        const p = particles[i];
 
-        particle.x += particle.vx * delta;
-        particle.y += particle.vy * delta;
+        const dx = mouseX - p.x;
+        const dy = mouseY - p.y;
+        const distance = Math.hypot(dx, dy);
 
-        particle.vx *= Math.pow(0.96, delta);
-        particle.vy *= Math.pow(0.96, delta);
+        // Nearby particles react to the cursor
+        if (active && distance > 8 && distance < 130) {
+          const force = (1 - distance / 130) * 0.12;
 
-        particle.life -= 0.022 * delta;
+          p.vx += (dx / distance) * force * delta;
+          p.vy += (dy / distance) * force * delta;
+        }
 
-        if (particle.life <= 0) {
+        p.x += p.vx * delta;
+        p.y += p.vy * delta;
+
+        p.vx *= Math.pow(0.965, delta);
+        p.vy *= Math.pow(0.965, delta);
+
+        p.life -= 0.019 * delta;
+
+        if (p.life <= 0) {
           particles.splice(i, 1);
           continue;
         }
 
-        ctx.globalAlpha = particle.life;
-        ctx.fillStyle = particle.color;
-        ctx.shadowColor = particle.color;
-        ctx.shadowBlur = 10;
+        ctx.globalAlpha = p.life;
+        ctx.fillStyle = p.color;
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 12;
 
         ctx.beginPath();
-        ctx.arc(
-          particle.x,
-          particle.y,
-          particle.size * particle.life,
-          0,
-          Math.PI * 2,
-        );
+        ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -295,7 +454,7 @@ export default function EnergyCursor() {
       for (let i = ripples.length - 1; i >= 0; i--) {
         const ripple = ripples[i];
 
-        ripple.radius += 3.5 * delta;
+        ripple.radius += 4 * delta;
         ripple.life -= 0.035 * delta;
 
         if (ripple.life <= 0) {
@@ -308,66 +467,58 @@ export default function EnergyCursor() {
         ctx.globalCompositeOperation = "lighter";
         ctx.globalAlpha = ripple.life;
         ctx.strokeStyle = "#FF5B3A";
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 2;
         ctx.shadowColor = "#FF5B3A";
-        ctx.shadowBlur = 12;
+        ctx.shadowBlur = 16;
 
         ctx.beginPath();
-        ctx.arc(
-          ripple.x,
-          ripple.y,
-          ripple.radius,
-          0,
-          Math.PI * 2,
-        );
+        ctx.arc(ripple.x, ripple.y, ripple.radius, 0, Math.PI * 2);
         ctx.stroke();
 
         ctx.restore();
       }
 
-      // Sharp, visible cursor core
+      // Cursor core
       if (active) {
         ctx.save();
 
         ctx.globalCompositeOperation = "source-over";
         ctx.globalAlpha = 1;
 
-        // Soft orange glow
+        // Soft glow
         const gradient = ctx.createRadialGradient(
           mouseX,
           mouseY,
           0,
           mouseX,
           mouseY,
-          22,
+          26,
         );
 
-        gradient.addColorStop(0, "rgba(255, 91, 58, 0.18)");
-        gradient.addColorStop(0.5, "rgba(255, 91, 58, 0.07)");
+        gradient.addColorStop(
+          0,
+          hovering ? "rgba(110, 168, 255, 0.28)" : "rgba(255, 91, 58, 0.22)",
+        );
+
+        gradient.addColorStop(0.5, "rgba(255, 91, 58, 0.06)");
         gradient.addColorStop(1, "rgba(255, 91, 58, 0)");
 
         ctx.fillStyle = gradient;
 
         ctx.beginPath();
-        ctx.arc(mouseX, mouseY, 22, 0, Math.PI * 2);
+        ctx.arc(mouseX, mouseY, 26, 0, Math.PI * 2);
         ctx.fill();
 
-        // Clear orange ring
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = "#FF5B3A";
+        // Outer ring
+        ctx.strokeStyle = hovering ? "#6EA8FF" : "#FF5B3A";
         ctx.lineWidth = 2;
+        ctx.shadowBlur = 0;
 
         ctx.beginPath();
-        ctx.arc(
-          mouseX,
-          mouseY,
-          hovering ? 10 : 7,
-          0,
-          Math.PI * 2,
-        );
+        ctx.arc(mouseX, mouseY, hovering ? 12 : 7, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Bright white center
+        // White core
         ctx.fillStyle = "#FFFFFF";
 
         ctx.beginPath();
@@ -378,7 +529,14 @@ export default function EnergyCursor() {
       }
     };
 
-    // Pause animation while the tab is hidden
+    // ----------------------------------------
+    // Pause when tab is hidden
+    // ----------------------------------------
+
+    const onPointerLeave = () => {
+      active = false;
+    };
+
     const onVisibilityChange = () => {
       if (document.hidden) {
         running = false;
@@ -404,7 +562,6 @@ export default function EnergyCursor() {
     });
 
     window.addEventListener("blur", onPointerLeave);
-
     document.addEventListener("pointerleave", onPointerLeave);
     document.addEventListener("visibilitychange", onVisibilityChange);
 
@@ -412,7 +569,6 @@ export default function EnergyCursor() {
 
     return () => {
       running = false;
-
       cancelAnimationFrame(animationId);
 
       window.removeEventListener("resize", resize);
@@ -426,10 +582,6 @@ export default function EnergyCursor() {
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="energy-cursor"
-      aria-hidden="true"
-    />
+    <canvas ref={canvasRef} className="energy-cursor" aria-hidden="true" />
   );
 }

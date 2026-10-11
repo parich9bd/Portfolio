@@ -3,7 +3,8 @@
 export const site = {
   brand: "PARI",
   name: "Parichehr",
-  title: "Creative Frontend Developer",
+  title:
+    "Frontend Developer , Context Engineer Building immersive digital experiences full-stack web applications",
 
   headline: ["I BUILD", "DIGITAL EXPERIENCES", "THAT FEEL DIFFERENT."],
 

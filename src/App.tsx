@@ -1,28 +1,45 @@
-import { useEffect } from 'react'
-import Navbar from './components/Navbar'
-import Footer from './components/Footer'
-import Hero from './sections/Hero'
-import { About, Projects, Skills, Experience, Process, Contact } from './sections/Sections'
-import EnergyCursor from './components/EnergyCursor'
-
+import { useEffect } from "react";
+import Navbar from "./components/Navbar";
+import Footer from "./components/Footer";
+import Hero from "./sections/Hero";
+import {
+  About,
+  Projects,
+  Skills,
+  Experience,
+  Process,
+  Contact,
+} from "./sections/Sections";
+import EnergyCursor from "./components/EnergyCursor";
 
 export default function App() {
   // One shared observer reveals every .reveal element (CSS handles the motion).
   useEffect(() => {
     const io = new IntersectionObserver(
-      (entries) => entries.forEach((e) => {
-        if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target) }
-      }),
+      (entries) =>
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add("in");
+            io.unobserve(e.target);
+          }
+        }),
       { threshold: 0.15 },
-    )
-    document.querySelectorAll('.reveal').forEach((el) => io.observe(el))
-    return () => io.disconnect()
-  }, [])
+    );
+    document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+    return () => io.disconnect();
+  }, []);
+
+  useEffect(() => {
+    window.history.scrollRestoration = "manual";
+    window.scrollTo(0, 0);
+  }, []);
 
   return (
     <>
       <EnergyCursor />
-      <a className="skip" href="#about">Skip to content</a>
+      <a className="skip" href="#about">
+        Skip to content
+      </a>
       <Navbar />
       <main>
         <Hero />
@@ -35,5 +52,5 @@ export default function App() {
       </main>
       <Footer />
     </>
-  )
+  );
 }
