@@ -3,6 +3,8 @@ import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import Hero from './sections/Hero'
 import { About, Projects, Skills, Experience, Process, Contact } from './sections/Sections'
+import EnergyCursor from './components/EnergyCursor'
+
 
 export default function App() {
   // One shared observer reveals every .reveal element (CSS handles the motion).
@@ -19,6 +21,7 @@ export default function App() {
 
   return (
     <>
+      <EnergyCursor />
       <a className="skip" href="#about">Skip to content</a>
       <Navbar />
       <main>
