@@ -1,9 +1,63 @@
-import { ArrowUpRight, Github } from "lucide-react";
 import SectionHeading from "../components/SectionHeading";
 import { site } from "../data/site";
 import { projects } from "../data/projects";
 import { skills } from "../data/skills";
 import { experience } from "../data/experience";
+import { ArrowUpRight, Github, Linkedin } from "lucide-react";
+
+export function Contact() {
+  const socialIcons = {
+    GitHub: Github,
+    LinkedIn: Linkedin,
+  };
+
+  return (
+    <section id="contact" className="sec contact" aria-labelledby="contact-h">
+      <SectionHeading index="06" id="contact-h">
+        Contact
+      </SectionHeading>
+
+      <p className="contact__big reveal">
+        Let’s build something <em>unforgettable.</em>
+      </p>
+
+      <a className="btn btn--solid reveal" href={`mailto:${site.email}`}>
+        {site.email}
+        <ArrowUpRight size={16} aria-hidden="true" />
+      </a>
+
+      <ul className="social-links reveal">
+        {site.socials.map((s) => {
+          const Icon = socialIcons[s.label as keyof typeof socialIcons];
+
+          return (
+            <li key={s.label}>
+              <a
+                className="social-link"
+                href={s.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Visit my ${s.label} profile`}
+              >
+                <span className="social-link__icon">
+                  {Icon && <Icon size={19} strokeWidth={1.8} />}
+                </span>
+
+                <span>{s.label}</span>
+
+                <ArrowUpRight
+                  className="social-link__arrow"
+                  size={15}
+                  aria-hidden="true"
+                />
+              </a>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
 
 export function About() {
   const a = site.about;
@@ -14,17 +68,17 @@ export function About() {
       </SectionHeading>
       <div className="about">
         <figure className="about__photo reveal">
-  <img
-    src="/pari.webp"
-    alt="Parichehr, Creative Frontend Developer"
-    loading="lazy"
-    decoding="async"
-  />
+          <img
+            src="/pari.webp"
+            alt="Parichehr, Creative Frontend Developer"
+            loading="lazy"
+            decoding="async"
+          />
 
-  <figcaption className="about__badge mono">
-    CREATIVE FRONTEND DEVELOPER
-  </figcaption>
-</figure>
+          <figcaption className="about__badge mono">
+            CREATIVE FRONTEND DEVELOPER
+          </figcaption>
+        </figure>
         <div className="about__text reveal">
           <p className="lead">{a.intro}</p>
           <dl>
@@ -161,31 +215,6 @@ export function Process() {
           </li>
         ))}
       </ol>
-    </section>
-  );
-}
-
-export function Contact() {
-  return (
-    <section id="contact" className="sec contact" aria-labelledby="contact-h">
-      <SectionHeading index="06" id="contact-h">
-        Contact
-      </SectionHeading>
-      <p className="contact__big reveal">
-        Let’s build something <em>unforgettable.</em>
-      </p>
-      <a className="btn btn--solid reveal" href={`mailto:${site.email}`}>
-        {site.email}
-      </a>
-      <ul className="row reveal">
-        {site.socials.map((s) => (
-          <li key={s.label}>
-            <a href={s.href} rel="noopener noreferrer">
-              {s.label}
-            </a>
-          </li>
-        ))}
-      </ul>
     </section>
   );
 }

@@ -11,11 +11,14 @@ export const site = {
   intro:
     "I build thoughtful digital experiences where creative design meets clean, reliable code.",
 
-  email: "YOUR_EMAIL@example.com",
+  email: "Parichehrabedzadeh@gmail.com",
 
   socials: [
-    { label: "GitHub", href: "https://github.com/YOUR_USERNAME" },
-    { label: "LinkedIn", href: "https://www.linkedin.com/in/YOUR_USERNAME" },
+    { label: "GitHub", href: "https://github.com/parichabd" },
+    {
+      label: "LinkedIn",
+      href: "https://www.linkedin.com/in/zahra-abedzadeh-187a43434?utm_source=share_via&utm_content=profile&utm_medium=member_ios",
+    },
   ],
 
   nav: [
@@ -47,28 +50,28 @@ export const site = {
   process: [
     [
       "01",
-      "DISCOVER",
-      "Understand the problem, the audience, and the goals behind every project.",
+      "UNDERSTAND",
+      "Define the project goals, understand user needs, and break the requirements into clear, manageable tasks.",
     ],
     [
       "02",
-      "DESIGN",
-      "Explore visual direction, typography, layout, and interactions to shape a distinctive experience.",
+      "STRUCTURE",
+      "Plan the application structure, organize components, and choose the right tools for a maintainable frontend.",
     ],
     [
       "03",
-      "DEVELOP",
-      "Build responsive interfaces with reusable components and maintainable code.",
+      "BUILD",
+      "Turn ideas into responsive interfaces using React, Next.js, and Tailwind CSS, with reusable components and thoughtful interactions.",
     ],
     [
       "04",
-      "REFINE",
-      "Improve accessibility, performance, responsiveness, and the details that make a difference.",
+      "INTEGRATE",
+      "Connect REST APIs, manage application state, handle forms, and build reliable user flows across the application.",
     ],
     [
       "05",
-      "SHIP",
-      "Test, deploy, and continuously improve the experience based on real-world use.",
+      "REFINE & SHIP",
+      "Test responsiveness, fix bugs, improve usability, and prepare the application for deployment.",
     ],
   ] as const,
 
