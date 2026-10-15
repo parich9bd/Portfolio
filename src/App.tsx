@@ -12,9 +12,19 @@ import {
 } from "./sections/Sections";
 import EnergyCursor from "./components/EnergyCursor";
 import CodeSpotlight from "./components/CodeSpotlight";
+import NotFound from "./pages/NotFound";
 
 export default function App() {
   // One shared observer reveals every .reveal element (CSS handles the motion).
+  if (window.location.pathname !== "/") {
+    return (
+      <>
+        <EnergyCursor />
+
+        <NotFound />
+      </>
+    );
+  }
   useEffect(() => {
     const io = new IntersectionObserver(
       (entries) =>

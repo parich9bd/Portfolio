@@ -14,7 +14,7 @@ export default function Footer() {
         href="#home"
         aria-label={`${site.brand} — Back to home`}
       >
-        {site.brand}
+        <img src="/Logo/3.jpg" alt="PARI" className="wordmark__logo" />
       </a>
 
       <small>
