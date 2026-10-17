@@ -1,4 +1,5 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import SourceAccessModal from "./components/SourceAccessModal";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Hero from "./sections/Hero";
@@ -15,35 +16,47 @@ import CodeSpotlight from "./components/CodeSpotlight";
 import NotFound from "./pages/NotFound";
 
 export default function App() {
-  // One shared observer reveals every .reveal element (CSS handles the motion).
-  if (window.location.pathname !== "/") {
+  const [isSourceModalOpen, setIsSourceModalOpen] = useState(false);
+  const isHomePage = window.location.pathname === "/";
+
+  useEffect(() => {
+    if (!isHomePage) return;
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("in");
+            io.unobserve(entry.target);
+          }
+        });
+      },
+      { threshold: 0.15 },
+    );
+
+    document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+
+    return () => io.disconnect();
+  }, [isHomePage]);
+
+  useEffect(() => {
+    if (!isHomePage) return;
+
+    window.history.scrollRestoration = "manual";
+    window.scrollTo(0, 0);
+  }, [isHomePage]);
+
+  if (!isHomePage) {
     return (
       <>
         <EnergyCursor />
-
         <NotFound />
       </>
     );
   }
-  useEffect(() => {
-    const io = new IntersectionObserver(
-      (entries) =>
-        entries.forEach((e) => {
-          if (e.isIntersecting) {
-            e.target.classList.add("in");
-            io.unobserve(e.target);
-          }
-        }),
-      { threshold: 0.15 },
-    );
-    document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
-    return () => io.disconnect();
-  }, []);
 
-  useEffect(() => {
-    window.history.scrollRestoration = "manual";
-    window.scrollTo(0, 0);
-  }, []);
+  const openSourceModal = () => setIsSourceModalOpen(true);
+  const closeSourceModal = () => setIsSourceModalOpen(false);
 
   return (
     <>
@@ -63,10 +76,15 @@ export default function App() {
         <Skills />
         <Experience />
         <Process />
-        <Contact />
+        <Contact onGitHubClick={openSourceModal} />
       </main>
 
-      <Footer />
+      <Footer onGitHubClick={openSourceModal} />
+
+      <SourceAccessModal
+        open={isSourceModalOpen}
+        onClose={closeSourceModal}
+      />
     </>
   );
 }

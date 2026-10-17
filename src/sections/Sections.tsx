@@ -3,10 +3,17 @@ import { site } from "../data/site";
 import { projects } from "../data/projects";
 import { skills } from "../data/skills";
 import { experience } from "../data/experience";
-import { ArrowUpRight, Github, Linkedin } from "lucide-react";
-import { useState } from "react";
+import {
+  ArrowUpRight,
+  Github,
+  Linkedin,
+  LockKeyhole,
+  X,
+  Mail,
+} from "lucide-react";
+import { useEffect, useState } from "react";
 
-export function Contact() {
+export function Contact({ onGitHubClick }: { onGitHubClick: () => void }) {
   const socialIcons = {
     GitHub: Github,
     LinkedIn: Linkedin,
@@ -33,25 +40,47 @@ export function Contact() {
 
           return (
             <li key={s.label}>
-              <a
-                className="social-link"
-                href={s.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`Visit my ${s.label} profile`}
-              >
-                <span className="social-link__icon">
-                  {Icon && <Icon size={19} strokeWidth={1.8} />}
-                </span>
+              {s.label === "GitHub" ? (
+                <button
+                  type="button"
+                  className="social-link"
+                  onClick={onGitHubClick}
+                  aria-haspopup="dialog"
+                  aria-label="Request access to my GitHub source code"
+                >
+                  <span className="social-link__icon">
+                    {Icon && <Icon size={19} strokeWidth={1.8} />}
+                  </span>
 
-                <span>{s.label}</span>
+                  <span>{s.label}</span>
 
-                <ArrowUpRight
-                  className="social-link__arrow"
-                  size={15}
-                  aria-hidden="true"
-                />
-              </a>
+                  <ArrowUpRight
+                    className="social-link__arrow"
+                    size={15}
+                    aria-hidden="true"
+                  />
+                </button>
+              ) : (
+                <a
+                  className="social-link"
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Visit my ${s.label} profile`}
+                >
+                  <span className="social-link__icon">
+                    {Icon && <Icon size={19} strokeWidth={1.8} />}
+                  </span>
+
+                  <span>{s.label}</span>
+
+                  <ArrowUpRight
+                    className="social-link__arrow"
+                    size={15}
+                    aria-hidden="true"
+                  />
+                </a>
+              )}
             </li>
           );
         })}
@@ -170,6 +199,26 @@ export function About() {
 export function Projects() {
   const [projectsLanguage, setProjectsLanguage] = useState<"en" | "fa">("en");
   const isFa = projectsLanguage === "fa";
+
+  const [selectedSourceProject, setSelectedSourceProject] = useState<
+    string | null
+  >(null);
+
+  useEffect(() => {
+    if (!selectedSourceProject) return;
+
+    function handleEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setSelectedSourceProject(null);
+      }
+    }
+
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [selectedSourceProject]);
 
   function toggleProjectsLanguage() {
     setProjectsLanguage((current) => (current === "en" ? "fa" : "en"));
@@ -359,14 +408,15 @@ export function Projects() {
                   )}
 
                   {p.source && (
-                    <a
-                      href={p.source}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <button
+                      type="button"
+                      className="source-access-trigger"
+                      onClick={() => setSelectedSourceProject(p.title)}
+                      aria-haspopup="dialog"
                     >
-                      <Github size={16} aria-hidden="true" />
-                      {isFa ? "کد منبع" : "Source"}
-                    </a>
+                      <LockKeyhole size={15} aria-hidden="true" />
+                      {isFa ? "سورس خصوصی" : "Private Source"}
+                    </button>
                   )}
                 </div>
               </div>
@@ -374,6 +424,71 @@ export function Projects() {
           );
         })}
       </ol>
+
+      {selectedSourceProject && (
+        <div
+          className="source-modal-backdrop"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) {
+              setSelectedSourceProject(null);
+            }
+          }}
+        >
+          <section
+            className="source-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="source-modal-title"
+            dir={isFa ? "rtl" : "ltr"}
+          >
+            <button
+              type="button"
+              className="source-modal__close"
+              onClick={() => setSelectedSourceProject(null)}
+              aria-label={isFa ? "بستن پنجره" : "Close dialog"}
+            >
+              <X size={19} aria-hidden="true" />
+            </button>
+
+            <div className="source-modal__icon">
+              <LockKeyhole size={25} aria-hidden="true" />
+            </div>
+
+            <span className="source-modal__eyebrow">
+              {isFa ? "دسترسی محدود" : "RESTRICTED ACCESS"}
+            </span>
+
+            <h3 id="source-modal-title">
+              {isFa ? "سورس کد خصوصی" : "Private Source Code"}
+            </h3>
+
+            <p>
+              {isFa
+                ? `کد منبع پروژهٔ ${selectedSourceProject} به‌صورت عمومی منتشر نشده است. اگر کارفرما یا استخدام‌کننده هستید و مایلید ساختار و پیاده‌سازی پروژه را بررسی کنید، می‌توانید درخواست دسترسی ارسال کنید.`
+                : `The source code for ${selectedSourceProject} is not publicly available. If you are a recruiter or potential employer interested in reviewing the implementation, you can request access.`}
+            </p>
+
+            <a
+              className="source-modal__request"
+              href={`mailto:${site.email}?subject=${encodeURIComponent(
+                `Source code access request — ${selectedSourceProject}`,
+              )}&body=${encodeURIComponent(
+                `Hello Parichehr,\n\nI would like to request access to the source code for ${selectedSourceProject}.\n\nMy name and role:\nReason for access:\n\nThank you.`,
+              )}`}
+            >
+              <Mail size={17} aria-hidden="true" />
+              {isFa ? "درخواست دسترسی" : "Request Access"}
+              <ArrowUpRight size={16} aria-hidden="true" />
+            </a>
+
+            <span className="source-modal__note">
+              {isFa
+                ? "درخواست‌ها به‌صورت جداگانه بررسی می‌شوند."
+                : "Access requests are reviewed individually."}
+            </span>
+          </section>
+        </div>
+      )}
     </section>
   );
 }
@@ -384,8 +499,7 @@ export function Skills() {
   const groupTranslations: Record<string, string> = {
     "Frontend Development": "توسعه فرانت‌اند",
     "Styling and UI Engineering": "استایل‌دهی و مهندسی رابط کاربری",
-    "State Management and Data Fetching":
-      "مدیریت وضعیت و دریافت داده‌ها",
+    "State Management and Data Fetching": "مدیریت وضعیت و دریافت داده‌ها",
     "Backend Development": "توسعه بک‌اند",
     Databases: "پایگاه‌های داده",
     "Tools and Workflow": "ابزارها و گردش کار",
@@ -407,9 +521,7 @@ export function Skills() {
           type="button"
           className="section-language-toggle"
           onClick={() =>
-            setSkillsLanguage((current) =>
-              current === "en" ? "fa" : "en",
-            )
+            setSkillsLanguage((current) => (current === "en" ? "fa" : "en"))
           }
           aria-label={isFa ? "Switch to English" : "تغییر به فارسی"}
           title={isFa ? "Switch to English" : "تغییر زبان به فارسی"}
@@ -421,9 +533,7 @@ export function Skills() {
       <div className="skills">
         {Object.entries(skills).map(([group, list]) => (
           <div key={group} className="reveal">
-            <h3>
-              {isFa ? groupTranslations[group] ?? group : group}
-            </h3>
+            <h3>{isFa ? (groupTranslations[group] ?? group) : group}</h3>
 
             <ul className="tags">
               {list.map((skill) => (
@@ -484,9 +594,7 @@ export function Experience() {
           type="button"
           className="section-language-toggle"
           onClick={() =>
-            setExperienceLanguage((current) =>
-              current === "en" ? "fa" : "en",
-            )
+            setExperienceLanguage((current) => (current === "en" ? "fa" : "en"))
           }
           aria-label={isFa ? "Switch to English" : "تغییر به فارسی"}
           title={isFa ? "Switch to English" : "تغییر زبان به فارسی"}
@@ -502,31 +610,21 @@ export function Experience() {
           return (
             <li key={`${item.title}-${i}`} className="reveal">
               <span className="mono">
-                {isFa
-                  ? translated?.dates ?? item.dates
-                  : item.dates}
+                {isFa ? (translated?.dates ?? item.dates) : item.dates}
               </span>
 
               <h3>
-                {isFa
-                  ? translated?.title ?? item.title
-                  : item.title}
-
-                {" "}
+                {isFa ? (translated?.title ?? item.title) : item.title}{" "}
                 <em>
                   ·{" "}
-                  {isFa
-                    ? translated?.company ?? item.company
-                    : item.company}
+                  {isFa ? (translated?.company ?? item.company) : item.company}
                 </em>
               </h3>
 
               <ul>
                 {item.points.map((point, j) => (
                   <li key={j}>
-                    {isFa
-                      ? translated?.points[j] ?? point
-                      : point}
+                    {isFa ? (translated?.points[j] ?? point) : point}
                   </li>
                 ))}
               </ul>
@@ -537,7 +635,6 @@ export function Experience() {
     </section>
   );
 }
-
 
 export function Process() {
   const [processLanguage, setProcessLanguage] = useState<"en" | "fa">("en");
@@ -587,9 +684,7 @@ export function Process() {
           type="button"
           className="section-language-toggle"
           onClick={() =>
-            setProcessLanguage((current) =>
-              current === "en" ? "fa" : "en",
-            )
+            setProcessLanguage((current) => (current === "en" ? "fa" : "en"))
           }
           aria-label={isFa ? "Switch to English" : "تغییر به فارسی"}
           title={isFa ? "Switch to English" : "تغییر زبان به فارسی"}
@@ -603,13 +698,9 @@ export function Process() {
           <li key={number} className="reveal">
             <span className="mono">{number}</span>
 
-            <h3>
-              {isFa ? translations[index].title : title}
-            </h3>
+            <h3>{isFa ? translations[index].title : title}</h3>
 
-            <p>
-              {isFa ? translations[index].description : description}
-            </p>
+            <p>{isFa ? translations[index].description : description}</p>
           </li>
         ))}
       </ol>

@@ -1,12 +1,5 @@
 import { useEffect, useRef } from "react";
 
-/**
- * Flashlight code reveal.
- * Faint code is painted once on an offscreen canvas. A soft circular
- * "light" that follows the cursor reveals it. It only shows after the
- * hero has scrolled away (About section and below).
- */
-
 const codeLines = [
   "const developer = {",
   '  name: "Parichehr",',
@@ -52,7 +45,6 @@ const codeLines = [
   "if (future) deploy(future);",
 ];
 
-// Colors follow the site palette (accent orange, scene blue, muted ink).
 const COLORS = {
   keyword: "#ff5b3a",
   string: "#6ea8ff",
@@ -63,18 +55,16 @@ const COLORS = {
   gutter: "#5b6177",
 };
 
-// 1 comment, 2 string, 3 keyword, 4 boolean, 5 function call,
-// 6 identifier, 7 whitespace, 8 anything else
 const TOKEN =
   /(\/\/.*$)|("[^"]*"|'[^']*'|`[^`]*`)|\b(const|let|function|return|export|default|await|type|if|import|from|new)\b|\b(true|false)\b|([A-Za-z_$][\w$]*)(?=\()|([A-Za-z_$][\w$]*)|(\s+)|(.)/g;
 
 const FONT = '12px ui-monospace, "SF Mono", Menlo, Consolas, monospace';
 
-const RADIUS = 230; // flashlight size
-const EASING = 0.16; // how smoothly the light follows the cursor
+const RADIUS = 230;
+const EASING = 0.16;
 const COLUMN_WIDTH = 400;
 const LINE_HEIGHT = 24;
-const SHOW_AFTER_HERO_PX = 80; // hero bottom must be above this to activate
+const SHOW_AFTER_HERO_PX = 80;
 
 export default function CodeSpotlight() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -83,17 +73,16 @@ export default function CodeSpotlight() {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const context = canvas.getContext("2d");
-    if (!context) return;
-    const ctx = context;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
     const desktop = window.matchMedia("(hover: hover) and (pointer: fine)");
+
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
     const buffer = document.createElement("canvas");
-    const bufferCtx = buffer.getContext("2d");
-    if (!bufferCtx) return;
-    const bctx = bufferCtx;
+    const bctx = buffer.getContext("2d");
+    if (!bctx) return;
 
     const hero = document.querySelector<HTMLElement>(".hero");
 
@@ -107,7 +96,8 @@ export default function CodeSpotlight() {
     let lightX = -1000;
     let lightY = -1000;
 
-    /* Paint the code once (offscreen). Cheap to redraw every frame. */
+    const isMobile = () => !desktop.matches;
+
     const paintCode = (dpr: number) => {
       buffer.width = Math.round(width * dpr);
       buffer.height = Math.round(height * dpr);
@@ -122,7 +112,6 @@ export default function CodeSpotlight() {
       const rows = Math.ceil(height / LINE_HEIGHT) + 2;
 
       for (let column = 0; column < columns; column++) {
-        // Every column starts at a different line, so it reads like real files.
         const start = (column * 9) % codeLines.length;
 
         for (let row = 0; row < rows; row++) {
@@ -136,6 +125,9 @@ export default function CodeSpotlight() {
           bctx.fillText(String(row + 1).padStart(2, "0"), x, y);
 
           let cursorX = x + charWidth * 4;
+
+          // Reset the global regex before processing each line.
+          TOKEN.lastIndex = 0;
 
           for (const match of text.matchAll(TOKEN)) {
             const token = match[0];
@@ -166,16 +158,40 @@ export default function CodeSpotlight() {
       }
     };
 
-    /* Each frame: copy the code, keep only what the light touches. */
     const draw = () => {
       if (!isActive) return;
 
       ctx.globalCompositeOperation = "source-over";
+      ctx.globalAlpha = 1;
       ctx.clearRect(0, 0, width, height);
-      ctx.drawImage(buffer, 0, 0, width, height);
 
-      // Mask: the code stays visible only inside the light circle.
+      // MOBILE: static code background, no cursor needed.
+      if (isMobile()) {
+        ctx.globalAlpha = 0.24;
+        ctx.drawImage(buffer, 0, 0, width, height);
+        ctx.globalAlpha = 1;
+
+        const glow = ctx.createRadialGradient(
+          width * 0.5,
+          height * 0.45,
+          0,
+          width * 0.5,
+          height * 0.45,
+          Math.max(width, height) * 0.65,
+        );
+
+        glow.addColorStop(0, "rgba(255, 91, 58, 0.06)");
+        glow.addColorStop(1, "rgba(255, 91, 58, 0)");
+
+        ctx.fillStyle = glow;
+        ctx.fillRect(0, 0, width, height);
+        return;
+      }
+
+      // DESKTOP: mouse-following flashlight.
+      ctx.drawImage(buffer, 0, 0, width, height);
       ctx.globalCompositeOperation = "destination-in";
+
       const mask = ctx.createRadialGradient(
         lightX,
         lightY,
@@ -184,15 +200,17 @@ export default function CodeSpotlight() {
         lightY,
         RADIUS,
       );
+
       mask.addColorStop(0, "rgba(0, 0, 0, 1)");
       mask.addColorStop(0.4, "rgba(0, 0, 0, 0.72)");
       mask.addColorStop(0.75, "rgba(0, 0, 0, 0.22)");
       mask.addColorStop(1, "rgba(0, 0, 0, 0)");
+
       ctx.fillStyle = mask;
       ctx.fillRect(0, 0, width, height);
 
-      // A very soft warm glow so it feels like a real light.
       ctx.globalCompositeOperation = "source-over";
+
       const glow = ctx.createRadialGradient(
         lightX,
         lightY,
@@ -201,15 +219,17 @@ export default function CodeSpotlight() {
         lightY,
         RADIUS * 1.1,
       );
+
       glow.addColorStop(0, "rgba(255, 91, 58, 0.10)");
       glow.addColorStop(1, "rgba(255, 91, 58, 0)");
+
       ctx.fillStyle = glow;
       ctx.fillRect(0, 0, width, height);
     };
 
     const animate = () => {
       frame = 0;
-      if (!isActive) return;
+      if (!isActive || isMobile()) return;
 
       lightX += (mouseX - lightX) * EASING;
       lightY += (mouseY - lightY) * EASING;
@@ -222,21 +242,33 @@ export default function CodeSpotlight() {
     };
 
     const requestFrame = () => {
-      if (!frame) frame = requestAnimationFrame(animate);
+      if (!frame) {
+        frame = requestAnimationFrame(animate);
+      }
     };
 
     const updateVisibility = () => {
       const heroBottom = hero ? hero.getBoundingClientRect().bottom : 0;
 
-      isActive =
-        desktop.matches &&
-        !reducedMotion.matches &&
-        heroBottom <= SHOW_AFTER_HERO_PX;
+      const mobile = isMobile();
 
-      // Fading is handled by the CSS transition on .code-spotlight.
+      isActive =
+        heroBottom <= SHOW_AFTER_HERO_PX && (mobile || !reducedMotion.matches);
+
       canvas.style.opacity = isActive ? "1" : "0";
 
-      if (isActive) requestFrame();
+      if (frame) {
+        cancelAnimationFrame(frame);
+        frame = 0;
+      }
+
+      if (!isActive) return;
+
+      if (mobile) {
+        draw();
+      } else {
+        requestFrame();
+      }
     };
 
     const resize = () => {
@@ -249,11 +281,11 @@ export default function CodeSpotlight() {
       canvas.height = Math.round(height * dpr);
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
+
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
       paintCode(dpr);
       updateVisibility();
-      draw();
     };
 
     const handlePointerMove = (event: PointerEvent) => {
@@ -262,8 +294,6 @@ export default function CodeSpotlight() {
       mouseX = event.clientX;
       mouseY = event.clientY;
 
-      // Not active yet (still in the hero): follow instantly,
-      // so the light doesn't slide in from the corner later.
       if (!isActive) {
         lightX = mouseX;
         lightY = mouseY;
@@ -274,17 +304,27 @@ export default function CodeSpotlight() {
     };
 
     const handlePointerLeave = () => {
-      // Cursor left the window: push the light off-screen smoothly.
+      if (!desktop.matches) return;
+
       mouseX = -RADIUS * 2;
       mouseY = -RADIUS * 2;
       requestFrame();
     };
 
-    window.addEventListener("pointermove", handlePointerMove, { passive: true });
-    window.addEventListener("scroll", updateVisibility, { passive: true });
+    window.addEventListener("pointermove", handlePointerMove, {
+      passive: true,
+    });
+    window.addEventListener("scroll", updateVisibility, {
+      passive: true,
+    });
     window.addEventListener("resize", resize);
-    document.documentElement.addEventListener("pointerleave", handlePointerLeave);
-    desktop.addEventListener("change", updateVisibility);
+
+    document.documentElement.addEventListener(
+      "pointerleave",
+      handlePointerLeave,
+    );
+
+    desktop.addEventListener("change", resize);
     reducedMotion.addEventListener("change", updateVisibility);
 
     resize();
@@ -293,11 +333,13 @@ export default function CodeSpotlight() {
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("scroll", updateVisibility);
       window.removeEventListener("resize", resize);
+
       document.documentElement.removeEventListener(
         "pointerleave",
         handlePointerLeave,
       );
-      desktop.removeEventListener("change", updateVisibility);
+
+      desktop.removeEventListener("change", resize);
       reducedMotion.removeEventListener("change", updateVisibility);
 
       if (frame) cancelAnimationFrame(frame);

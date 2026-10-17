@@ -1,7 +1,11 @@
 import { ArrowUp, ArrowUpRight, Github, Linkedin } from "lucide-react";
 import { site } from "../data/site";
 
-export default function Footer() {
+type FooterProps = {
+  onGitHubClick: () => void;
+};
+
+export default function Footer({ onGitHubClick }: FooterProps) {
   const socialIcons = {
     GitHub: Github,
     LinkedIn: Linkedin,
@@ -27,17 +31,31 @@ export default function Footer() {
 
           return (
             <li key={s.label}>
-              <a
-                className="footer__social-link"
-                href={s.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label={`Visit my ${s.label} profile`}
-              >
-                {Icon && <Icon size={17} strokeWidth={1.8} />}
-                <span>{s.label}</span>
-                <ArrowUpRight size={12} aria-hidden="true" />
-              </a>
+              {s.label === "GitHub" ? (
+                <button
+                  type="button"
+                  className="footer__social-link"
+                  onClick={onGitHubClick}
+                  aria-haspopup="dialog"
+                  aria-label="Request access to my GitHub source code"
+                >
+                  {Icon && <Icon size={17} strokeWidth={1.8} />}
+                  <span>{s.label}</span>
+                  <ArrowUpRight size={12} aria-hidden="true" />
+                </button>
+              ) : (
+                <a
+                  className="footer__social-link"
+                  href={s.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={`Visit my ${s.label} profile`}
+                >
+                  {Icon && <Icon size={17} strokeWidth={1.8} />}
+                  <span>{s.label}</span>
+                  <ArrowUpRight size={12} aria-hidden="true" />
+                </a>
+              )}
             </li>
           );
         })}
